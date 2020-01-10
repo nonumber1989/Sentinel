@@ -33,13 +33,9 @@ public class KairosUtil {
         }
     }
 
-    public static void writeToKairosDB(MetricEntity metric) {
-        SENTINEL_METRICS.stream().forEach(element -> {
-            writeToKairosDB(element, metric);
-        });
-    }
 
-    public static void writeToKairosDB(String metricName, MetricEntity metric) {
+
+    public static void writeToKairosDB( MetricEntity metric) {
         Map<String, Object> metricMap = objectToMap(metric);
         //compose tags
         Map<String, String> tags = new HashMap<>();
@@ -48,9 +44,11 @@ public class KairosUtil {
 
         //compose metric data point
         MetricBuilder builder = MetricBuilder.getInstance();
-        builder.addMetric(SENTINEL_PRIFIX + metricName)
-                .addTags(tags)
-                .addDataPoint(metric.getTimestamp().getTime(), metricMap.get(metricName));
+        SENTINEL_METRICS.stream().forEach(metricName -> {
+            builder.addMetric(SENTINEL_PRIFIX + metricName)
+                    .addTags(tags)
+                    .addDataPoint(metric.getTimestamp().getTime(), metricMap.get(metricName));
+        });
         KAIROS_HTTPCLIENT.pushMetrics(builder);
     }
 
@@ -79,6 +77,7 @@ public class KairosUtil {
         metricEntity.setSuccessQps(200L);
         metricEntity.setExceptionQps(190L);
         metricEntity.setRt(100.20);
+        metricEntity.setTimestamp(new Date());
         writeToKairosDB(metricEntity);
     }
 }
