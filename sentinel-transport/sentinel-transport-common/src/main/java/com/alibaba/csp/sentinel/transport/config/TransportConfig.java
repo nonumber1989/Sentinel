@@ -33,6 +33,10 @@ public class TransportConfig {
 
     public static final String HEARTBEAT_DEFAULT_PATH = "/registry/machine";
 
+    public static final String METRIC_API_PATH = "csp.sentinel.metric.api.path";
+
+    public static final String METRIC_DEFAULT_PATH = "/metrics";
+
     private static int runtimePort = -1;
 
     /**
@@ -109,6 +113,17 @@ public class TransportConfig {
         String apiPath = SentinelConfig.getConfig(HEARTBEAT_API_PATH);
         if (StringUtil.isBlank(apiPath)) {
             return HEARTBEAT_DEFAULT_PATH;
+        }
+        if (!apiPath.startsWith("/")) {
+            apiPath = "/" + apiPath;
+        }
+        return apiPath;
+    }
+
+    public static String getMetricApiPath() {
+        String apiPath = SentinelConfig.getConfig(METRIC_API_PATH);
+        if (StringUtil.isBlank(apiPath)) {
+            return METRIC_DEFAULT_PATH;
         }
         if (!apiPath.startsWith("/")) {
             apiPath = "/" + apiPath;

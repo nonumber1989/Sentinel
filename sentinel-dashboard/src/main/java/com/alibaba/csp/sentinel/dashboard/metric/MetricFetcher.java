@@ -61,7 +61,7 @@ public class MetricFetcher {
     private static final int HTTP_OK = 200;
     private static final long MAX_LAST_FETCH_INTERVAL_MS = 1000 * 15;
     private static final long FETCH_INTERVAL_SECOND = 6;
-    public static final Charset DEFAULT_CHARSET = Charset.forName(SentinelConfig.charset());
+    private static final Charset DEFAULT_CHARSET = Charset.forName(SentinelConfig.charset());
     private final static String METRIC_URL_PATH = "metric";
     private static Logger logger = LoggerFactory.getLogger(MetricFetcher.class);
     private final long intervalSecond = 1;
@@ -304,7 +304,7 @@ public class MetricFetcher {
         handleBody(lines, machine, metricMap);
     }
 
-    public void handleBody(String[] lines, MachineInfo machine, Map<String, MetricEntity> map) {
+    private void handleBody(String[] lines, MachineInfo machine, Map<String, MetricEntity> map) {
         //logger.info("handleBody() lines=" + lines.length + ", machine=" + machine);
         if (lines.length < 1) {
             return;
@@ -345,11 +345,11 @@ public class MetricFetcher {
         }
     }
 
-    public String buildMetricKey(String app, String resource, long timestamp) {
+    private String buildMetricKey(String app, String resource, long timestamp) {
         return app + "__" + resource + "__" + (timestamp / 1000);
     }
 
-    public boolean shouldFilterOut(String resource) {
+    private boolean shouldFilterOut(String resource) {
         return RES_EXCLUSION_SET.contains(resource);
     }
 
