@@ -15,6 +15,9 @@
  */
 package com.alibaba.csp.sentinel.transport.heartbeat.client;
 
+import com.alibaba.csp.sentinel.log.CommandCenterLog;
+import com.alibaba.csp.sentinel.log.RecordLog;
+
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -24,9 +27,6 @@ import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.util.Map;
 import java.util.Map.Entry;
-
-import com.alibaba.csp.sentinel.log.CommandCenterLog;
-import com.alibaba.csp.sentinel.log.RecordLog;
 
 /**
  * <p>
@@ -63,8 +63,8 @@ public class SimpleHttpClient {
             return null;
         }
         return request(request.getSocketAddress(),
-            RequestMethod.GET, request.getRequestPath(), request.getParams(),
-            request.getCharset(), request.getSoTimeout());
+                RequestMethod.GET, request.getRequestPath(), request.getParams(),
+                request.getCharset(), request.getSoTimeout());
     }
 
     /**
@@ -79,15 +79,25 @@ public class SimpleHttpClient {
             return null;
         }
         return request(request.getSocketAddress(),
-            RequestMethod.POST, request.getRequestPath(),
-            request.getParams(), request.getCharset(),
-            request.getSoTimeout());
+                RequestMethod.POST, request.getRequestPath(),
+                request.getParams(), request.getCharset(),
+                request.getSoTimeout());
+    }
+
+    public SimpleHttpResponse postJSON(SimpleHttpRequest request) throws IOException {
+        if (request == null) {
+            return null;
+        }
+        return request(request.getSocketAddress(),
+                RequestMethod.POST, request.getRequestPath(),
+                request.getJson(), request.getCharset(),
+                request.getSoTimeout());
     }
 
     private SimpleHttpResponse request(InetSocketAddress socketAddress,
                                        RequestMethod type, String requestPath,
                                        Map<String, String> paramsMap, Charset charset, int soTimeout)
-        throws IOException {
+            throws IOException {
         Socket socket = null;
         BufferedWriter writer;
         try {
@@ -113,6 +123,51 @@ public class SimpleHttpClient {
                 writer.write("Content-Length: " + params.getBytes(charset).length + "\r\n");
                 writer.write("\r\n");
                 writer.write(params);
+            }
+            writer.flush();
+
+            SimpleHttpResponse response = new SimpleHttpResponseParser().parse(socket.getInputStream());
+            socket.close();
+            socket = null;
+            return response;
+        } finally {
+            if (socket != null) {
+                try {
+                    socket.close();
+                } catch (Exception ex) {
+                    CommandCenterLog.info("Error when closing " + type + " request to " + socketAddress + ": ", ex);
+                }
+            }
+        }
+    }
+
+    private SimpleHttpResponse request(InetSocketAddress socketAddress,
+                                       RequestMethod type, String requestPath,
+                                       String json, Charset charset, int soTimeout)
+            throws IOException {
+        Socket socket = null;
+        BufferedWriter writer;
+        try {
+            socket = new Socket();
+            socket.setSoTimeout(soTimeout);
+            socket.connect(socketAddress, soTimeout);
+
+            writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), charset));
+            writer.write(getStatusLine(type, requestPath) + "\r\n");
+            if (charset != null) {
+                writer.write("Content-Type: application/json; charset=" + charset.name() + "\r\n");
+            } else {
+                writer.write("Content-Type: application/json\r\n");
+            }
+            writer.write("Host: " + socketAddress.getHostName() + "\r\n");
+            if (type == RequestMethod.GET) {
+                writer.write("Content-Length: 0\r\n");
+                writer.write("\r\n");
+            } else {
+                // POST method.
+                writer.write("Content-Length: " + json.getBytes(charset).length + "\r\n");
+                writer.write("\r\n");
+                writer.write(json);
             }
             writer.flush();
 
@@ -167,9 +222,9 @@ public class SimpleHttpClient {
                     continue;
                 }
                 paramsBuilder.append(URLEncoder.encode(entry.getKey(), charset.name()))
-                    .append("=")
-                    .append(URLEncoder.encode(entry.getValue(), charset.name()))
-                    .append("&");
+                        .append("=")
+                        .append(URLEncoder.encode(entry.getValue(), charset.name()))
+                        .append("&");
             }
             if (paramsBuilder.length() > 0) {
                 // Remove the last '&'.

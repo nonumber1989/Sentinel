@@ -75,9 +75,9 @@ public class SimpleHttpMetricSender implements MetricSender {
         List<MetricNode> metricNodes = searchMetricNodes(currentTime);
         JSONObject jsonNode = new JSONObject();
         jsonNode.put("metricNodes", metricNodes);
-//        request.setParams(jsonNode.toJSONString());
+        request.setJson(jsonNode.toJSONString());
         try {
-            SimpleHttpResponse response = httpClient.post(request);
+            SimpleHttpResponse response = httpClient.postJSON(request);
             if (response.getStatusCode() == OK_STATUS) {
                 return true;
             }

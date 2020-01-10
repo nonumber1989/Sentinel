@@ -15,13 +15,13 @@
  */
 package com.alibaba.csp.sentinel.transport.heartbeat.client;
 
+import com.alibaba.csp.sentinel.config.SentinelConfig;
+import com.alibaba.csp.sentinel.util.StringUtil;
+
 import java.net.InetSocketAddress;
 import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Map;
-
-import com.alibaba.csp.sentinel.config.SentinelConfig;
-import com.alibaba.csp.sentinel.util.StringUtil;
 
 /**
  * Simple HTTP request representation.
@@ -34,6 +34,7 @@ public class SimpleHttpRequest {
     private String requestPath = "";
     private int soTimeout = 3000;
     private Map<String, String> params;
+    private String json;
     private Charset charset = Charset.forName(SentinelConfig.charset());
 
     public SimpleHttpRequest(InetSocketAddress socketAddress, String requestPath) {
@@ -95,5 +96,13 @@ public class SimpleHttpRequest {
         }
         params.put(key, value);
         return this;
+    }
+
+    public String getJson() {
+        return json;
+    }
+
+    public void setJson(String json) {
+        this.json = json;
     }
 }
