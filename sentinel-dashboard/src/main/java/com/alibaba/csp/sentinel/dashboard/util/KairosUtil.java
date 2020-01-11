@@ -1,5 +1,7 @@
-package com.alibaba.csp.sentinel.dashboard.repository.metric;
+package com.alibaba.csp.sentinel.dashboard.util;
 
+import com.alibaba.csp.sentinel.dashboard.datasource.entity.KairosApplicationEntity;
+import com.alibaba.csp.sentinel.dashboard.datasource.entity.MachineEntity;
 import com.alibaba.csp.sentinel.dashboard.datasource.entity.MetricEntity;
 import org.kairosdb.client.HttpClient;
 import org.kairosdb.client.builder.MetricBuilder;
@@ -17,17 +19,29 @@ import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.text.NumberFormat;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 public class KairosUtil {
 
     private static final Logger logger = LoggerFactory.getLogger(KairosUtil.class);
 
+    public static final String SENTINEL_METADATA_SERVICE_NAME = "sentinel.metadata";
+    public static final String METADATA_SERVICE_FULL_PATH = "/api/v1/metadata/{service}/{serviceKey}/{key}";
+    public static final String METADATA_SERVICE_PATH = "/api/v1/metadata/{service}";
+    public static final String METADATA_SERVICE_KEY_PATH = "/api/v1/metadata/{service}/{serviceKey}";
+
+    /**
+     * used as cache
+     */
+    public static final Map<String, KairosApplicationEntity> KAIROS_APPLICATION = new ConcurrentHashMap<>();
+
     public static HttpClient KAIROS_HTTPCLIENT;
+
 
     //kairosDB address
     public static final String KARIOSDB_ADDRESS = "kairosdb.address";
-    public static final String SENTINEL_PRIFIX = "sentinel_";
+    public static final String SENTINEL_PRIFIX = "sentinel.";
     //TODO
     public static final List<String> SENTINEL_METRICS = Arrays.asList("passQps", "successQps", "blockQps", "exceptionQps", "rt");
 
@@ -39,6 +53,8 @@ public class KairosUtil {
                 throw new RuntimeException("kairosdb.address property must defined first !");
             }
             KAIROS_HTTPCLIENT = new HttpClient(kairosAddress);
+
+            //first to initial KAIROS_APPLICATION
         } catch (MalformedURLException e) {
             e.printStackTrace();
         }
@@ -60,6 +76,25 @@ public class KairosUtil {
                     .addDataPoint(metric.getTimestamp().getTime(), metricMap.get(metricName));
         });
         KAIROS_HTTPCLIENT.pushMetrics(builder);
+    }
+
+    //TODO  i know this way will occur data consistency issue
+    // but monitor data can tolerate it
+    private static void hackKairosMetricWrite(MetricEntity metric) {
+        KairosApplicationEntity kairosApplication = KAIROS_APPLICATION.get(metric.getApp());
+        String resource = metric.getResource();
+        if (!kairosApplication.getResources().contains(resource)) {
+            kairosApplication.getResources().add(resource);
+        }
+        Set<String> ips = kairosApplication.getMachines().stream().map(machine -> machine.getIp()).collect(Collectors.toSet());
+        //TODO
+        if (!ips.contains("ip")) {
+            MachineEntity machine = new MachineEntity();
+            machine.setApp(metric.getApp());
+            machine.setIp("127.0.0.1");
+            kairosApplication.getMachines().add(machine);
+        }
+        //other update and delete operation or just sort and filter in memory
     }
 
     public static List<MetricEntity> queryFromKairosDB(String app, String resource, long startTime, long endTime) {
@@ -92,9 +127,11 @@ public class KairosUtil {
 
 
         //second step aggregate
-        List<MetricEntity> metricEntities = groupedMetrics.values().stream().map(groupedMetric -> {
+        List<MetricEntity> metricEntities = groupedMetrics.entrySet().stream().map(groupedMetric -> {
+            List<MetricEntity> metricValue = groupedMetric.getValue();
+            Date timestamp = groupedMetric.getKey();
             Map<String, Object> metricMap = new HashMap<>();
-            groupedMetric.stream().forEach(metric -> {
+            metricValue.stream().forEach(metric -> {
                 Map<String, Object> tempMap = objectToMap(metric);
                 SENTINEL_METRICS.stream().forEach(fieldName -> {
                     Object value = tempMap.get(fieldName);
@@ -106,6 +143,7 @@ public class KairosUtil {
             MetricEntity metricEntity = mapToObject(metricMap, MetricEntity.class);
             metricEntity.setApp(app);
             metricEntity.setResource(resource);
+            metricEntity.setTimestamp(timestamp);
             return metricEntity;
         }).collect(Collectors.toList());
         return metricEntities;
@@ -179,7 +217,7 @@ public class KairosUtil {
     }
 
     public static void main(String[] args) {
-        queryFromKairosDB("falcon", "/topics/1", 1578637628000L, 1578724029000L);
+
     }
 
 }

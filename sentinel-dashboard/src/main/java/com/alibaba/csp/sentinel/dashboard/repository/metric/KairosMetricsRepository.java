@@ -1,9 +1,11 @@
 package com.alibaba.csp.sentinel.dashboard.repository.metric;
 
 import com.alibaba.csp.sentinel.dashboard.datasource.entity.MetricEntity;
+import com.alibaba.csp.sentinel.dashboard.util.KairosUtil;
 import com.alibaba.csp.sentinel.util.StringUtil;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -32,8 +34,11 @@ public class KairosMetricsRepository implements MetricsRepository<MetricEntity> 
 
     @Override
     public List<String> listResourcesOfApp(String app) {
-        return null;
+        List<String> resources = new ArrayList<>();
+        resources.add("/topics/{id}");
+        resources.add("/topics/1");
+        resources.add("/topics/2");
+        resources.add("/topics/3");
+        return resources;
     }
-
-
 }
