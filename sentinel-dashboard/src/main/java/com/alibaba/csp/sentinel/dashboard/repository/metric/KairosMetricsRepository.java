@@ -8,10 +8,7 @@ import com.alibaba.csp.sentinel.util.StringUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 @Component("kairosMetricsRepository")
 public class KairosMetricsRepository implements MetricsRepository<MetricEntity> {
@@ -23,6 +20,7 @@ public class KairosMetricsRepository implements MetricsRepository<MetricEntity> 
         if (Objects.isNull(metric) || StringUtil.isBlank(metric.getApp())) {
             return;
         }
+        resourceDiscovery.addResource(metric.getApp(), metric.getResource());
         KairosUtil.writeToKairosDB(metric);
     }
 
@@ -41,6 +39,7 @@ public class KairosMetricsRepository implements MetricsRepository<MetricEntity> 
 
     @Override
     public List<String> listResourcesOfApp(String app) {
+        Set<String> resources = resourceDiscovery.getResources(app);
         KairosApplicationEntity kairosApplication = KairosUtil.KAIROS_APPLICATION.get(app);
         if (Objects.nonNull(kairosApplication)) {
             return new ArrayList<>(kairosApplication.getResources());
