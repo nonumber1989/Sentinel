@@ -21,14 +21,14 @@ import com.alibaba.fastjson.JSONObject;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class SimpleHttpMetricSender implements MetricSender {
     private static final int OK_STATUS = 200;
 
     private static final long DEFAULT_INTERVAL = 1000 * 10;
 
-    private static final String maxLinesStr = null;
-    private static final String identity = null;
+    private static final int MAX_LINES = 12000;
 
     private final SimpleHttpClient httpClient = new SimpleHttpClient();
 
@@ -135,21 +135,17 @@ public class SimpleHttpMetricSender implements MetricSender {
 
 
     public List<MetricNode> searchMetricNodes(Long currentTime) {
-        List<MetricNode> metricNodes = new ArrayList<>();
+        List<MetricNode> metricNodes = null;
         Long startTime = currentTime - DEFAULT_INTERVAL;
-        int maxLines = 0;
         try {
-            if (StringUtil.isNotBlank(maxLinesStr)) {
-                maxLines = Integer.parseInt(maxLinesStr);
-            }
-            maxLines = Math.min(maxLines, 12000);
-            metricNodes = searcher.find(startTime, maxLines);
+            metricNodes = searcher.find(startTime, MAX_LINES);
         } catch (Exception ex) {
             CommandResponse.ofFailure(new RuntimeException("Error when retrieving metrics", ex));
         }
-        if (StringUtil.isBlank(identity)) {
-            addCpuUsageAndLoad(metricNodes);
+        if(metricNodes == null){
+            metricNodes = new ArrayList<>();
         }
+        addCpuUsageAndLoad(metricNodes);
         return metricNodes;
     }
 
