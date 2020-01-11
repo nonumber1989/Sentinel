@@ -27,7 +27,7 @@ public class KairosMetricsRepository implements MetricsRepository<MetricEntity> 
 
     @Override
     public List<MetricEntity> queryByAppAndResourceBetween(String app, String resource, long startTime, long endTime) {
-        return null;
+        return KairosUtil.queryFromKairosDB(app, resource, startTime, endTime);
     }
 
     @Override
