@@ -13,6 +13,7 @@ import com.alibaba.csp.sentinel.transport.config.TransportConfig;
 import com.alibaba.csp.sentinel.transport.heartbeat.client.SimpleHttpClient;
 import com.alibaba.csp.sentinel.transport.heartbeat.client.SimpleHttpRequest;
 import com.alibaba.csp.sentinel.transport.heartbeat.client.SimpleHttpResponse;
+import com.alibaba.csp.sentinel.util.AppNameUtil;
 import com.alibaba.csp.sentinel.util.PidUtil;
 import com.alibaba.csp.sentinel.util.StringUtil;
 import com.alibaba.csp.sentinel.util.TimeUtil;
@@ -75,6 +76,7 @@ public class SimpleHttpMetricSender implements MetricSender {
         List<MetricNode> metricNodes = searchMetricNodes(currentTime);
         JSONObject jsonNode = new JSONObject();
         jsonNode.put("metricNodes", metricNodes);
+        jsonNode.put("app", AppNameUtil.getAppName());
         request.setJson(jsonNode.toJSONString());
         try {
             SimpleHttpResponse response = httpClient.postJSON(request);

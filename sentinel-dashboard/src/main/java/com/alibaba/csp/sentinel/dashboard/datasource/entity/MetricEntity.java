@@ -47,6 +47,11 @@ public class MetricEntity {
 
     private int resourceCode;
 
+    /**
+     * extended fields
+     */
+    private String ip;
+
     public static MetricEntity copyOf(MetricEntity oldEntity) {
         MetricEntity entity = new MetricEntity();
         entity.setId(oldEntity.getId());
@@ -198,23 +203,32 @@ public class MetricEntity {
         this.successQps = successQps;
     }
 
+    public String getIp() {
+        return ip;
+    }
+
+    public void setIp(String ip) {
+        this.ip = ip;
+    }
+
     @Override
     public String toString() {
         return "MetricEntity{" +
-            "id=" + id +
-            ", gmtCreate=" + gmtCreate +
-            ", gmtModified=" + gmtModified +
-            ", app='" + app + '\'' +
-            ", timestamp=" + timestamp +
-            ", resource='" + resource + '\'' +
-            ", passQps=" + passQps +
-            ", blockQps=" + blockQps +
-            ", successQps=" + successQps +
-            ", exceptionQps=" + exceptionQps +
-            ", rt=" + rt +
-            ", count=" + count +
-            ", resourceCode=" + resourceCode +
-            '}';
+                "id=" + id +
+                ", gmtCreate=" + gmtCreate +
+                ", gmtModified=" + gmtModified +
+                ", app='" + app + '\'' +
+                ", timestamp=" + timestamp +
+                ", resource='" + resource + '\'' +
+                ", passQps=" + passQps +
+                ", blockQps=" + blockQps +
+                ", successQps=" + successQps +
+                ", exceptionQps=" + exceptionQps +
+                ", rt=" + rt +
+                ", count=" + count +
+                ", resourceCode=" + resourceCode +
+                ", ip=" + ip +
+                '}';
     }
 
 }

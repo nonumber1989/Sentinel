@@ -18,6 +18,10 @@ import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.util.*;
 
+/**
+ * TODO 别玩了 好不如直接耦合kairosDB
+ * 封装毛线
+ */
 public class HttpClientUtils {
     private static HttpClientBuilder HTTPCLIENT_BUILDER = HttpClientBuilder.create().setRetryHandler(new StandardHttpRequestRetryHandler());
     private static CloseableHttpClient RAW_HTTPCLIENT = HTTPCLIENT_BUILDER.build();
@@ -79,7 +83,7 @@ public class HttpClientUtils {
         try {
             CloseableHttpResponse response = RAW_HTTPCLIENT.execute(httpUriRequest);
             int statusCode = response.getStatusLine().getStatusCode();
-            if (statusCode == 200 || statusCode == 204) {
+            if (statusCode == 200) {
                 try (BufferedReader bufferedReader = new BufferedReader(
                         new InputStreamReader(response.getEntity().getContent()))) {
                     String result = "";

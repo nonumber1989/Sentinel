@@ -6,7 +6,6 @@ import java.util.List;
 
 public class MetricNodesVo {
     private List<MetricNode> metricNodes;
-    //TODO just for test
     private String ip;
     private String app;
 

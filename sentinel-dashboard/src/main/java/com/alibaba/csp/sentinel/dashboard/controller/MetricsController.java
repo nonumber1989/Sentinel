@@ -45,9 +45,8 @@ public class MetricsController {
         if (ipAddress == null) {
             ipAddress = request.getRemoteAddr();
         }
-        String appName = request.getHeader("X-SENTINEL-APP");
         MachineInfo machineInfo = new MachineInfo();
-        machineInfo.setApp(appName);
+        machineInfo.setApp(metricNodes.getApp());
         machineInfo.setIp(ipAddress);
         Map<String, MetricEntity> metricMap = handleMetricNodes(metricNodes.getMetricNodes(), machineInfo);
         metricStore.saveAll(metricMap.values());
@@ -68,6 +67,7 @@ public class MetricsController {
             Date date = new Date();
             MetricEntity entity = new MetricEntity();
             entity.setApp(machine.getApp());
+            entity.setIp(machine.getIp());
             entity.setTimestamp(new Date(node.getTimestamp()));
             entity.setPassQps(node.getPassQps());
             entity.setBlockQps(node.getBlockQps());

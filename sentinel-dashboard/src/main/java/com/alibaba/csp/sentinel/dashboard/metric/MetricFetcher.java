@@ -39,7 +39,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.stereotype.Component;
 
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
@@ -54,7 +53,7 @@ import java.util.concurrent.atomic.AtomicLong;
  *
  * @author leyou
  */
-@Component
+//@Component
 public class MetricFetcher {
 
     public static final String NO_METRICS = "No metrics";

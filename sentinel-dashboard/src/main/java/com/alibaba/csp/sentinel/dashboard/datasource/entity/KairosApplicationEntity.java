@@ -1,5 +1,6 @@
 package com.alibaba.csp.sentinel.dashboard.datasource.entity;
 
+import java.util.HashSet;
 import java.util.Set;
 
 /**
@@ -7,8 +8,8 @@ import java.util.Set;
  */
 public class KairosApplicationEntity {
     private String app;
-    private Set<MachineEntity> machines;
-    private Set<String> resources;
+    private Set<MachineEntity> machines = new HashSet<>();
+    private Set<String> resources = new HashSet<>();
 
     public String getApp() {
         return app;
