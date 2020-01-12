@@ -1,5 +1,7 @@
 package com.alibaba.csp.sentinel.dashboard.datasource.entity;
 
+import com.alibaba.csp.sentinel.dashboard.discovery.MachineInfo;
+
 import java.util.HashSet;
 import java.util.Set;
 
@@ -8,7 +10,7 @@ import java.util.Set;
  */
 public class KairosApplicationEntity {
     private String app;
-    private Set<MachineEntity> machines = new HashSet<>();
+    private Set<MachineInfo> machines = new HashSet<>();
     private Set<String> resources = new HashSet<>();
 
     public String getApp() {
@@ -19,11 +21,11 @@ public class KairosApplicationEntity {
         this.app = app;
     }
 
-    public Set<MachineEntity> getMachines() {
+    public Set<MachineInfo> getMachines() {
         return machines;
     }
 
-    public void setMachines(Set<MachineEntity> machines) {
+    public void setMachines(Set<MachineInfo> machines) {
         this.machines = machines;
     }
 

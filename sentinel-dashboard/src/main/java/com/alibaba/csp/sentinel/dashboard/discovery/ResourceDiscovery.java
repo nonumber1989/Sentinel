@@ -7,4 +7,5 @@ public interface ResourceDiscovery {
     Long addResource(String app, String resource);
 
     Set<String> getResources(String app);
+
 }

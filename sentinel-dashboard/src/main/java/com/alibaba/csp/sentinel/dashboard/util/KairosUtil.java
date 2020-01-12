@@ -2,9 +2,19 @@ package com.alibaba.csp.sentinel.dashboard.util;
 
 import com.alibaba.csp.sentinel.concurrent.NamedThreadFactory;
 import com.alibaba.csp.sentinel.dashboard.datasource.entity.KairosApplicationEntity;
-import com.alibaba.csp.sentinel.dashboard.datasource.entity.MachineEntity;
 import com.alibaba.csp.sentinel.dashboard.datasource.entity.MetricEntity;
+import com.alibaba.csp.sentinel.dashboard.discovery.AppInfo;
+import com.alibaba.csp.sentinel.dashboard.discovery.MachineDiscovery;
+import com.alibaba.csp.sentinel.dashboard.discovery.ResourceDiscovery;
 import com.google.gson.Gson;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.client.StandardHttpRequestRetryHandler;
+import org.apache.http.util.EntityUtils;
 import org.kairosdb.client.HttpClient;
 import org.kairosdb.client.builder.MetricBuilder;
 import org.kairosdb.client.builder.QueryBuilder;
@@ -17,27 +27,28 @@ import java.beans.PropertyDescriptor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.MalformedURLException;
+import java.nio.charset.StandardCharsets;
 import java.text.NumberFormat;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class KairosUtil {
 
     private static ExecutorService KAIROS_EXECUTOR_SERVICE = new ThreadPoolExecutor(5, 5, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(1024), new NamedThreadFactory("sentinel-kairos-metrics-task"));
 
-//    private static final Logger logger = LoggerFactory.getLogger(KairosUtil.class);
-
     public static final String SENTINEL_METADATA_SERVICE_NAME = "sentinel.metadata";
     // full path format is  /api/v1/metadata/{service}/{serviceKey}/{key}
     public static final String METADATA_SERVICE_PATH = "/api/v1/metadata/" + SENTINEL_METADATA_SERVICE_NAME + "/";
 
-    /**
-     * used as cache
-     */
-    public static final Map<String, KairosApplicationEntity> KAIROS_APPLICATION = new ConcurrentHashMap<>();
-
     public static HttpClient KAIROS_HTTPCLIENT;
+
+    private static HttpClientBuilder HTTPCLIENT_BUILDER = HttpClientBuilder.create().setRetryHandler(new StandardHttpRequestRetryHandler());
+
+    private static CloseableHttpClient RAW_HTTPCLIENT = HTTPCLIENT_BUILDER.build();
 
     private static Gson GSON = new Gson();
     //kairosDB address
@@ -74,53 +85,6 @@ public class KairosUtil {
                     .addDataPoint(metric.getTimestamp().getTime(), metricMap.get(metricName));
         });
         KAIROS_HTTPCLIENT.pushMetrics(builder);
-        //async hack kairosDB write
-        KAIROS_EXECUTOR_SERVICE.submit(() -> {
-            hackKairosMetricWrite(metric);
-        });
-    }
-
-    /**
-     * TODO  i know this way will occur data consistency issue
-     * but monitor data can tolerate it
-     */
-    private static void hackKairosMetricWrite(MetricEntity metric) {
-
-        Map<String, String> headerMap = new HashMap<>();
-        headerMap.put("Content-Type", "application/json;charset=UTF-8");
-        String kairosAddress = "http://localhost:10101";
-
-
-        KairosApplicationEntity kairosApplication = KAIROS_APPLICATION.get(metric.getApp());
-        if (Objects.isNull(kairosApplication)) {
-            String test = HttpClientUtils.doHttpGet(kairosAddress + METADATA_SERVICE_PATH + "app/" + metric.getApp(), new HashMap<>(), headerMap);
-            kairosApplication = GSON.fromJson(test, KairosApplicationEntity.class);
-            if (Objects.isNull(kairosAddress)) {
-                kairosApplication = new KairosApplicationEntity();
-            } else {
-                KAIROS_APPLICATION.put(metric.getApp(), kairosApplication);
-            }
-        }
-        kairosApplication.setApp(metric.getApp());
-
-        String resource = metric.getResource();
-        Set<String> resources = kairosApplication.getResources();
-        if (resources.isEmpty() || !resources.contains(resource)) {
-            resources.add(resource);
-        }
-        Set<String> ips = kairosApplication.getMachines().stream().map(machine -> machine.getIp()).collect(Collectors.toSet());
-
-        if (ips.isEmpty() || !ips.contains(metric.getIp())) {
-            MachineEntity machine = new MachineEntity();
-            machine.setApp(metric.getApp());
-            machine.setIp(metric.getIp());
-            machine.setTimestamp(metric.getTimestamp());
-            kairosApplication.getMachines().add(machine);
-        }
-        //不折腾了 fastjson 序列化报错？？？
-        String applicationJSON = GSON.toJson(kairosApplication);
-        HttpClientUtils.doHttpPost(kairosAddress + METADATA_SERVICE_PATH + "app/" + metric.getApp(), applicationJSON, headerMap);
-        //other update and delete operation or just sort and filter in memory
     }
 
     public static List<MetricEntity> queryFromKairosDB(String app, String resource, long startTime, long endTime) {
@@ -245,4 +209,65 @@ public class KairosUtil {
         }
     }
 
+
+    public static boolean saveKairosMetadata(String url, String jsonBody) {
+        HttpPost httpPost = new HttpPost(url);
+        httpPost.addHeader("Content-Type", "application/json");
+        httpPost.setEntity(new StringEntity(jsonBody, "UTF-8"));
+        try (CloseableHttpResponse response = RAW_HTTPCLIENT.execute(httpPost)) {
+            int statusCode = response.getStatusLine().getStatusCode();
+            if (statusCode == 204) {
+                return true;
+            } else {
+                throw new RuntimeException("saveKairosMetadata with raw http client failed ! url is " + url);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("saveKairosMetadata  with raw http client failed ! url is " + url, e);
+        }
+    }
+
+    public static String getKairosMetadata(String url) {
+        HttpGet httpGet = new HttpGet(url);
+        httpGet.addHeader("Content-Type", "application/json");
+        try (CloseableHttpResponse response = RAW_HTTPCLIENT.execute(httpGet)) {
+            int statusCode = response.getStatusLine().getStatusCode();
+            if (statusCode == 200) {
+                String metadataJSON = EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8);
+                return metadataJSON;
+            } else {
+                throw new RuntimeException("getKairosMetadata with raw http client failed ! url is " + url);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("getKairosMetadata  with raw http client failed ! url is " + url, e);
+        }
+    }
+
+    public static void hackKairosMetricWrite(MetricEntity metric, MachineDiscovery machineDiscovery, ResourceDiscovery resourceDiscovery) {
+        //trigger resource first
+        resourceDiscovery.addResource(metric.getApp(), metric.getResource());
+
+        KAIROS_EXECUTOR_SERVICE.submit(() -> {
+            String appName = metric.getApp();
+            String kairosAddress = "http://localhost:10101";
+            KairosApplicationEntity kairosApplication = new KairosApplicationEntity();
+            AppInfo appInfo = machineDiscovery.getDetailApp(appName);
+            if (Objects.nonNull(appInfo)) {
+                kairosApplication.setMachines(appInfo.getMachines());
+            } else {
+                String kairosMetadata = getKairosMetadata(kairosAddress + METADATA_SERVICE_PATH + "app/" + metric.getApp());
+                kairosApplication = GSON.fromJson(kairosMetadata, KairosApplicationEntity.class);
+                kairosApplication.getMachines().stream().forEach(machineInfo -> {
+                    machineDiscovery.addMachine(machineInfo);
+                });
+                kairosApplication.getResources().stream().forEach(resource -> {
+                    resourceDiscovery.addResource(appName, resource);
+                });
+            }
+            kairosApplication.setApp(appName);
+            kairosApplication.setResources(resourceDiscovery.getResources(metric.getApp()));
+
+            String applicationJSON = GSON.toJson(kairosApplication);
+            saveKairosMetadata(kairosAddress + METADATA_SERVICE_PATH + "app/" + metric.getApp(), applicationJSON);
+        });
+    }
 }
