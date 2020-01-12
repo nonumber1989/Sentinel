@@ -13,7 +13,6 @@
 
     <modules>
         <module>sentinel-transport-common</module>
-
         <module>sentinel-transport-simple-http</module>
         <module>sentinel-transport-netty-http</module>
     </modules>
