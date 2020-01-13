@@ -7,7 +7,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 @Component
-public class SimpleResorceDiscovery implements ResourceDiscovery {
+public class SimpleResourceDiscovery implements ResourceDiscovery {
     private final ConcurrentMap<String, Set<String>> resources = new ConcurrentHashMap<>();
 
     @Override

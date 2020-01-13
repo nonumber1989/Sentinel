@@ -26,7 +26,6 @@ import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.net.MalformedURLException;
 import java.nio.charset.StandardCharsets;
 import java.text.NumberFormat;
 import java.util.*;
@@ -44,33 +43,17 @@ public class KairosUtil {
     // full path format is  /api/v1/metadata/{service}/{serviceKey}/{key}
     public static final String METADATA_SERVICE_PATH = "/api/v1/metadata/" + SENTINEL_METADATA_SERVICE_NAME + "/";
 
-    public static HttpClient KAIROS_HTTPCLIENT;
-
     private static HttpClientBuilder HTTPCLIENT_BUILDER = HttpClientBuilder.create().setRetryHandler(new StandardHttpRequestRetryHandler());
 
     private static CloseableHttpClient RAW_HTTPCLIENT = HTTPCLIENT_BUILDER.build();
 
     private static Gson GSON = new Gson();
-    //kairosDB address
-    public static final String KARIOSDB_ADDRESS = "sentinel.kairosdb.address";
+
     public static final String SENTINEL_PRIFIX = "sentinel.";
     //sentinel metrics
     public static final List<String> SENTINEL_METRICS = Arrays.asList("passQps", "successQps", "blockQps", "exceptionQps", "rt");
 
-    static {
-        try {
-            String kairosAddress = "http://localhost:10101";
-//            String kairosAddress = System.getProperty(KARIOSDB_ADDRESS);
-            if (Objects.isNull(kairosAddress)) {
-                throw new RuntimeException("sentinel.kairosdb.address property must defined first !");
-            }
-            KAIROS_HTTPCLIENT = new HttpClient(kairosAddress);
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public static void writeToKairosDB(MetricEntity metric) {
+    public static void writeToKairosDB(HttpClient kairosHttpClient, MetricEntity metric) {
         Map<String, Object> metricMap = objectToMap(metric);
         //compose tags
         Map<String, String> tags = new HashMap<>();
@@ -84,10 +67,10 @@ public class KairosUtil {
                     .addTags(tags)
                     .addDataPoint(metric.getTimestamp().getTime(), metricMap.get(metricName));
         });
-        KAIROS_HTTPCLIENT.pushMetrics(builder);
+        kairosHttpClient.pushMetrics(builder);
     }
 
-    public static List<MetricEntity> queryFromKairosDB(String app, String resource, long startTime, long endTime) {
+    public static List<MetricEntity> queryFromKairosDB(HttpClient kairosHttpClient, String app, String resource, long startTime, long endTime) {
 
         QueryBuilder builder = QueryBuilder.getInstance();
         SENTINEL_METRICS.stream().forEach(metricName -> {
@@ -98,7 +81,7 @@ public class KairosUtil {
                     .setEnd(new Date(endTime))
                     .addMetric(queryMetric);
         });
-        QueryResponse response = KAIROS_HTTPCLIENT.query(builder);
+        QueryResponse response = kairosHttpClient.query(builder);
 
         //I split two steps
         //First groupBy
