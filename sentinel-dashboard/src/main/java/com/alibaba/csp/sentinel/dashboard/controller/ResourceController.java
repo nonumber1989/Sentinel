@@ -28,7 +28,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -75,6 +78,7 @@ public class ResourceController {
         } else {
             // Normal (cluster node).
             List<NodeVo> nodeVos = httpFetcher.fetchClusterNodeOfMachine(ip, port, true);
+            handleMetricsWithPattern(nodeVos);
             if (nodeVos == null) {
                 return Result.ofSuccess(null);
             }
@@ -86,4 +90,25 @@ public class ResourceController {
             return Result.ofSuccess(ResourceVo.fromNodeVoList(nodeVos));
         }
     }
+
+    private List<NodeVo> handleMetricsWithPattern(List<NodeVo> metricNodes) {
+        Map<Long, List<NodeVo>> groupMetrics = metricNodes.stream().collect(Collectors.groupingBy(NodeVo::getTimestamp));
+        groupMetrics.entrySet().stream().forEach(element -> {
+            List<String> allResources = element.getValue().stream().map(value -> value.getResource()).collect(Collectors.toList());
+            //TODO just simple judge now
+            Set<String> patternResources = allResources.stream().filter(resource -> resource.contains("/{")).collect(Collectors.toSet());
+            if (!patternResources.isEmpty()) {
+                Iterator<NodeVo> metricNodeIterator = metricNodes.iterator();
+                while (metricNodeIterator.hasNext()) {
+                    NodeVo node = metricNodeIterator.next();
+                    boolean isPatternMatch = MetricsResourcePattern.isPatternMatch(node.getResource(), patternResources);
+                    if (isPatternMatch) {
+                        metricNodeIterator.remove();
+                    }
+                }
+            }
+        });
+        return metricNodes;
+    }
+
 }
