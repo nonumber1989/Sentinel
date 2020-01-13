@@ -1,4 +1,4 @@
-package com.alibaba.csp.sentinel.dashboard.util;
+package com.alibaba.csp.sentinel.dashboard.repository.metric;
 
 import com.alibaba.csp.sentinel.concurrent.NamedThreadFactory;
 import com.alibaba.csp.sentinel.dashboard.datasource.entity.KairosApplicationEntity;
@@ -20,12 +20,15 @@ import org.kairosdb.client.builder.MetricBuilder;
 import org.kairosdb.client.builder.QueryBuilder;
 import org.kairosdb.client.builder.QueryMetric;
 import org.kairosdb.client.response.QueryResponse;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
 import java.beans.BeanInfo;
 import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.net.MalformedURLException;
 import java.nio.charset.StandardCharsets;
 import java.text.NumberFormat;
 import java.util.*;
@@ -35,25 +38,49 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-public class KairosUtil {
+@Component
+public class KairosHelper {
 
-    private static ExecutorService KAIROS_EXECUTOR_SERVICE = new ThreadPoolExecutor(5, 5, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(1024), new NamedThreadFactory("sentinel-kairos-metrics-task"));
+    private ExecutorService KAIROS_EXECUTOR_SERVICE = new ThreadPoolExecutor(5, 5, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(1024), new NamedThreadFactory("sentinel-kairos-metrics-task"));
 
-    public static final String SENTINEL_METADATA_SERVICE_NAME = "sentinel.metadata";
+    public final String SENTINEL_METADATA_SERVICE_NAME = "sentinel.metadata";
     // full path format is  /api/v1/metadata/{service}/{serviceKey}/{key}
-    public static final String METADATA_SERVICE_PATH = "/api/v1/metadata/" + SENTINEL_METADATA_SERVICE_NAME + "/";
+    public final String METADATA_SERVICE_PATH = "/api/v1/metadata/" + SENTINEL_METADATA_SERVICE_NAME + "/";
 
-    private static HttpClientBuilder HTTPCLIENT_BUILDER = HttpClientBuilder.create().setRetryHandler(new StandardHttpRequestRetryHandler());
+    private HttpClientBuilder HTTPCLIENT_BUILDER = HttpClientBuilder.create().setRetryHandler(new StandardHttpRequestRetryHandler());
 
-    private static CloseableHttpClient RAW_HTTPCLIENT = HTTPCLIENT_BUILDER.build();
+    private CloseableHttpClient RAW_HTTPCLIENT = HTTPCLIENT_BUILDER.build();
 
-    private static Gson GSON = new Gson();
+    private Gson GSON = new Gson();
 
-    public static final String SENTINEL_PRIFIX = "sentinel.";
+    public final String SENTINEL_PRIFIX = "sentinel.";
+
+    //kairosDB address
+    public static final String KARIOSDB_ADDRESS = "sentinel.kairosdb.address";
+
+    public static HttpClient KAIROS_HTTPCLIENT;
+
+    private static String KAIROS_ADDRESS;
+
     //sentinel metrics
-    public static final List<String> SENTINEL_METRICS = Arrays.asList("passQps", "successQps", "blockQps", "exceptionQps", "rt");
+    public final List<String> SENTINEL_METRICS = Arrays.asList("passQps", "successQps", "blockQps", "exceptionQps", "rt");
 
-    public static void writeToKairosDB(HttpClient kairosHttpClient, MetricEntity metric) {
+    public KairosHelper(@Value("${sentinel.kairosdb.address}") String kairosAddress) {
+        if (Objects.isNull(kairosAddress)) {
+            kairosAddress = System.getProperty(KARIOSDB_ADDRESS);
+        }
+        this.KAIROS_ADDRESS = kairosAddress;
+        if (Objects.isNull(kairosAddress)) {
+            throw new RuntimeException(KARIOSDB_ADDRESS + " must config first when use kairosDB as storage !");
+        }
+        try {
+            KAIROS_HTTPCLIENT = new HttpClient(kairosAddress);
+        } catch (MalformedURLException e) {
+            throw new RuntimeException(" initial kairosDB client failed !", e);
+        }
+    }
+
+    public void writeToKairosDB(MetricEntity metric) {
         Map<String, Object> metricMap = objectToMap(metric);
         //compose tags
         Map<String, String> tags = new HashMap<>();
@@ -67,10 +94,10 @@ public class KairosUtil {
                     .addTags(tags)
                     .addDataPoint(metric.getTimestamp().getTime(), metricMap.get(metricName));
         });
-        kairosHttpClient.pushMetrics(builder);
+        KAIROS_HTTPCLIENT.pushMetrics(builder);
     }
 
-    public static List<MetricEntity> queryFromKairosDB(HttpClient kairosHttpClient, String app, String resource, long startTime, long endTime) {
+    public List<MetricEntity> queryFromKairosDB(String app, String resource, long startTime, long endTime) {
 
         QueryBuilder builder = QueryBuilder.getInstance();
         SENTINEL_METRICS.stream().forEach(metricName -> {
@@ -81,7 +108,7 @@ public class KairosUtil {
                     .setEnd(new Date(endTime))
                     .addMetric(queryMetric);
         });
-        QueryResponse response = kairosHttpClient.query(builder);
+        QueryResponse response = KAIROS_HTTPCLIENT.query(builder);
 
         //I split two steps
         //First groupBy
@@ -131,7 +158,7 @@ public class KairosUtil {
      * @param target
      * @return
      */
-    public static Map<String, Object> objectToMap(Object target) {
+    public Map<String, Object> objectToMap(Object target) {
         Map<String, Object> result = new HashMap<String, Object>();
         try {
             BeanInfo info = Introspector.getBeanInfo(target.getClass());
@@ -154,7 +181,7 @@ public class KairosUtil {
      * @param typeClass
      * @return
      */
-    public static <T> T mapToObject(Map<String, Object> map, Class<T> typeClass) {
+    public <T> T mapToObject(Map<String, Object> map, Class<T> typeClass) {
         T object = null;
         if (Objects.nonNull(map) && !map.isEmpty()) {
             try {
@@ -177,7 +204,7 @@ public class KairosUtil {
     }
 
 
-    private static void setValueForMetricEntity(MetricEntity entity, final String metricName, final String stringValue) {
+    private void setValueForMetricEntity(MetricEntity entity, final String metricName, final String stringValue) {
         String fieldName = metricName.substring(0, 1).toUpperCase() + metricName.substring(1);
         // all metric is number format , use reflect to parse
         try {
@@ -193,7 +220,7 @@ public class KairosUtil {
     }
 
 
-    public static boolean saveKairosMetadata(String url, String jsonBody) {
+    public boolean saveKairosMetadata(String url, String jsonBody) {
         HttpPost httpPost = new HttpPost(url);
         httpPost.addHeader("Content-Type", "application/json");
         httpPost.setEntity(new StringEntity(jsonBody, "UTF-8"));
@@ -209,7 +236,7 @@ public class KairosUtil {
         }
     }
 
-    public static String getKairosMetadata(String url) {
+    public String getKairosMetadata(String url) {
         HttpGet httpGet = new HttpGet(url);
         httpGet.addHeader("Content-Type", "application/json");
         try (CloseableHttpResponse response = RAW_HTTPCLIENT.execute(httpGet)) {
@@ -225,19 +252,18 @@ public class KairosUtil {
         }
     }
 
-    public static void hackKairosMetricWrite(MetricEntity metric, MachineDiscovery machineDiscovery, ResourceDiscovery resourceDiscovery) {
+    public void hackKairosMetricWrite(MetricEntity metric, MachineDiscovery machineDiscovery, ResourceDiscovery resourceDiscovery) {
         //trigger resource first
         resourceDiscovery.addResource(metric.getApp(), metric.getResource());
 
         KAIROS_EXECUTOR_SERVICE.submit(() -> {
             String appName = metric.getApp();
-            String kairosAddress = "http://localhost:10101";
             KairosApplicationEntity kairosApplication = new KairosApplicationEntity();
             AppInfo appInfo = machineDiscovery.getDetailApp(appName);
             if (Objects.nonNull(appInfo)) {
                 kairosApplication.setMachines(appInfo.getMachines());
             } else {
-                String kairosMetadata = getKairosMetadata(kairosAddress + METADATA_SERVICE_PATH + "app/" + metric.getApp());
+                String kairosMetadata = getKairosMetadata(KAIROS_ADDRESS + METADATA_SERVICE_PATH + "app/" + metric.getApp());
                 kairosApplication = GSON.fromJson(kairosMetadata, KairosApplicationEntity.class);
                 kairosApplication.getMachines().stream().forEach(machineInfo -> {
                     machineDiscovery.addMachine(machineInfo);
@@ -250,7 +276,7 @@ public class KairosUtil {
             kairosApplication.setResources(resourceDiscovery.getResources(metric.getApp()));
 
             String applicationJSON = GSON.toJson(kairosApplication);
-            saveKairosMetadata(kairosAddress + METADATA_SERVICE_PATH + "app/" + metric.getApp(), applicationJSON);
+            saveKairosMetadata(KAIROS_ADDRESS + METADATA_SERVICE_PATH + "app/" + metric.getApp(), applicationJSON);
         });
     }
 }

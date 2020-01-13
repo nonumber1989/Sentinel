@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * only for client push  metrics to server side
@@ -48,11 +49,32 @@ public class MetricsController {
         MachineInfo machineInfo = new MachineInfo();
         machineInfo.setApp(metricNodes.getApp());
         machineInfo.setIp(ipAddress);
-        Map<String, MetricEntity> metricMap = handleMetricNodes(metricNodes.getMetricNodes(), machineInfo);
+        List<MetricNode> metrics = metricNodes.getMetricNodes();
+        handleMetricsWithPattern(metrics);
+        Map<String, MetricEntity> metricMap = handleMetricNodes(metrics, machineInfo);
         metricStore.saveAll(metricMap.values());
         return Result.ofSuccess(null);
     }
 
+    private List<MetricNode> handleMetricsWithPattern(List<MetricNode> metrics) {
+        Map<Long, List<MetricNode>> groupMetrics = metrics.stream().collect(Collectors.groupingBy(MetricNode::getTimestamp));
+        groupMetrics.entrySet().stream().forEach(element -> {
+            List<String> allResources = element.getValue().stream().map(value -> value.getResource()).collect(Collectors.toList());
+            //TODO just simple judge now
+            Set<String> patternResources = allResources.stream().filter(resource -> resource.contains("/{")).collect(Collectors.toSet());
+            if (!patternResources.isEmpty()) {
+                Iterator<MetricNode> metricNodeIterator = metrics.iterator();
+                while (metricNodeIterator.hasNext()) {
+                    MetricNode node = metricNodeIterator.next();
+                    boolean isPatternMatch = MetricsResourcePattern.isPatternMatch(node.getResource(), patternResources);
+                    if (isPatternMatch) {
+                        metricNodeIterator.remove();
+                    }
+                }
+            }
+        });
+        return metrics;
+    }
 
     public Map<String, MetricEntity> handleMetricNodes(List<MetricNode> metricNodes, MachineInfo machine) {
         Map<String, MetricEntity> resultMap = new HashMap<>();

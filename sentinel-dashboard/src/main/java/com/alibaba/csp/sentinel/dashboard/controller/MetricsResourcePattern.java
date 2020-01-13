@@ -4,7 +4,9 @@ import org.springframework.util.AntPathMatcher;
 import org.springframework.util.PathMatcher;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 
 //TODO need Dedbug more
 public class MetricsResourcePattern {
@@ -14,9 +16,18 @@ public class MetricsResourcePattern {
 
     private static final boolean useTrailingSlashMatch = false;
 
-    private static final List<String> fileExtensions = new ArrayList<>();
+    private static final List<String> fileExtensions = Arrays.asList("json");
 
-    public static List<String> getMatchingPatterns(String lookupPath, List<String> patterns) {
+    public static boolean isPatternMatch(String lookupPath, Set<String> patterns) {
+        boolean patternMatch = false;
+        List<String> matches = getMatchingPatterns(lookupPath, patterns);
+        if (!matches.isEmpty() && !matches.get(0).equals(lookupPath)) {
+            patternMatch = true;
+        }
+        return patternMatch;
+    }
+
+    public static List<String> getMatchingPatterns(String lookupPath, Set<String> patterns) {
         List<String> matches = new ArrayList<>();
         for (String pattern : patterns) {
             String match = getMatchingPattern(pattern, lookupPath);
@@ -57,13 +68,5 @@ public class MetricsResourcePattern {
             }
         }
         return null;
-    }
-
-    public static void main(String[] args) {
-        List<String> patterns = new ArrayList<>();
-        patterns.add("/topics/{id}/{name}");
-        patterns.add("/topics/{id}");
-        List<String> fuck = getMatchingPatterns("/topics/3", patterns);
-        System.out.println("xxx");
     }
 }
