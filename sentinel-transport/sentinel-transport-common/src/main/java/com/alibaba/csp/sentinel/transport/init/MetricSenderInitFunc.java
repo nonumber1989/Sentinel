@@ -50,7 +50,7 @@ public class MetricSenderInitFunc implements InitFunc {
     }
 
     long retrieveInterval(/*@NonNull*/ MetricSender sender) {
-        Long intervalInConfig = TransportConfig.getHeartbeatIntervalMs();
+        Long intervalInConfig = TransportConfig.getMetricIntervalMs();
         if (isValidInterval(intervalInConfig)) {
             RecordLog.info("[MetricSenderInitFunc] Using metric interval "
                     + "in Sentinel config property: " + intervalInConfig);

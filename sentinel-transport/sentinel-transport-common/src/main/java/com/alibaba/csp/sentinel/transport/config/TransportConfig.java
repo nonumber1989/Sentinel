@@ -54,6 +54,10 @@ public class TransportConfig {
         }
     }
 
+    public static Long getMetricIntervalMs() {
+        return getHeartbeatIntervalMs();
+    }
+
     /**
      * Get ip:port of Sentinel Dashboard.
      *

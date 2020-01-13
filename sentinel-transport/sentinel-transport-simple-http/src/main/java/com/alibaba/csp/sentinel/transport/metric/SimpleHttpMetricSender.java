@@ -22,7 +22,6 @@ import com.alibaba.fastjson.JSONObject;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 public class SimpleHttpMetricSender implements MetricSender {
     private static final int OK_STATUS = 200;
@@ -144,7 +143,7 @@ public class SimpleHttpMetricSender implements MetricSender {
         } catch (Exception ex) {
             CommandResponse.ofFailure(new RuntimeException("Error when retrieving metrics", ex));
         }
-        if(metricNodes == null){
+        if (metricNodes == null) {
             metricNodes = new ArrayList<>();
         }
         addCpuUsageAndLoad(metricNodes);
