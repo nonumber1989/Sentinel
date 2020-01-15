@@ -5,6 +5,7 @@ import com.alibaba.csp.sentinel.dashboard.datasource.entity.KairosApplicationEnt
 import com.alibaba.csp.sentinel.dashboard.datasource.entity.MetricEntity;
 import com.alibaba.csp.sentinel.dashboard.discovery.AppInfo;
 import com.alibaba.csp.sentinel.dashboard.discovery.MachineDiscovery;
+import com.alibaba.csp.sentinel.dashboard.discovery.MachineInfo;
 import com.alibaba.csp.sentinel.dashboard.discovery.ResourceDiscovery;
 import com.google.gson.Gson;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -272,19 +273,33 @@ public class KairosHelper {
             if (Objects.nonNull(appInfo)) {//already load app from kairosDB
                 if ((currentTime - appInfo.getLastHeartbeat()) > KAIROS_UPDATE_META_DRUTION) {
                     //get updated info from kairosDB
-                    KairosApplicationEntity application = new KairosApplicationEntity();
+                    KairosApplicationEntity application = getKairosApplication(appName);
+                    Map<String, MachineInfo> remoteMachineMap = application.getMachines().stream()
+                            .collect(Collectors.toMap(MachineInfo::getIp, machine -> machine));
+                    appInfo.getMachines().stream().forEach(machine -> {
+                        MachineInfo machineInfo = remoteMachineMap.get(machine.getIp());
+                        if (Objects.nonNull(machineInfo)) {
+                            if (machineInfo.getLastHeartbeat() > machine.getLastHeartbeat()) {
+                                machine.setLastHeartbeat(machineInfo.getLastHeartbeat());
+                            }
+                        } else {
+                            machineDiscovery.addMachine(machine);
+                        }
+                    });
+
+                    appInfo = machineDiscovery.getDetailApp(appName);
                     application.setMachines(appInfo.getMachines());
                     application.setLastHeartbeat(appInfo.getLastHeartbeat());
                     application.setApp(appName);
-                    application.setResources(resourceDiscovery.getResources(metric.getApp()));
+                    application.setResources(resourceDiscovery.getResources(appName));
                     String applicationJSON = GSON.toJson(application);
-                    saveKairosMetadata(KAIROS_ADDRESS + METADATA_SERVICE_PATH + "app/" + metric.getApp(), applicationJSON);
+                    saveKairosMetadata(KAIROS_ADDRESS + METADATA_SERVICE_PATH + "app/" + appName, applicationJSON);
                     appInfo.setLastHeartbeat(System.currentTimeMillis());
                 } else {
                     //do nothing
                 }
             } else {//not load app
-                KairosApplicationEntity application = getKairosApplication(metric.getApp());
+                KairosApplicationEntity application = getKairosApplication(appName);
                 application.getMachines().stream().forEach(machineInfo -> {
                     machineDiscovery.addMachine(machineInfo);
                 });
@@ -299,12 +314,15 @@ public class KairosHelper {
     }
 
     private KairosApplicationEntity getKairosApplication(String appName) {
+        KairosApplicationEntity application = new KairosApplicationEntity();
         String kairosMetadata = getKairosMetadata(KAIROS_ADDRESS + METADATA_SERVICE_PATH + "app/" + appName);
         if (Objects.nonNull(kairosMetadata)) {
-            KairosApplicationEntity application = GSON.fromJson(kairosMetadata, KairosApplicationEntity.class);
-            return application;
+            application = GSON.fromJson(kairosMetadata, KairosApplicationEntity.class);
         } else {
-            return null;
+            application.setApp(appName);
+            application.setLastHeartbeat(System.currentTimeMillis());
         }
+        return application;
     }
+
 }
