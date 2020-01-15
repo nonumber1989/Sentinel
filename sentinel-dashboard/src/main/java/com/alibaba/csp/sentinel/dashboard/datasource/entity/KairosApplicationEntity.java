@@ -13,6 +13,8 @@ public class KairosApplicationEntity {
     private Set<MachineInfo> machines = new HashSet<>();
     private Set<String> resources = new HashSet<>();
 
+    private long lastHeartbeat;
+
     public String getApp() {
         return app;
     }
@@ -35,5 +37,13 @@ public class KairosApplicationEntity {
 
     public void setResources(Set<String> resources) {
         this.resources = resources;
+    }
+
+    public long getLastHeartbeat() {
+        return lastHeartbeat;
+    }
+
+    public void setLastHeartbeat(long lastHeartbeat) {
+        this.lastHeartbeat = lastHeartbeat;
     }
 }

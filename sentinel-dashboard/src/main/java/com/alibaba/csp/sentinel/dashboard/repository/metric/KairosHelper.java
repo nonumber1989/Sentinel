@@ -20,6 +20,8 @@ import org.kairosdb.client.builder.MetricBuilder;
 import org.kairosdb.client.builder.QueryBuilder;
 import org.kairosdb.client.builder.QueryMetric;
 import org.kairosdb.client.response.QueryResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -41,6 +43,8 @@ import java.util.stream.Collectors;
 @Component
 public class KairosHelper {
 
+    private final Logger logger = LoggerFactory.getLogger(KairosHelper.class);
+
     private ExecutorService KAIROS_EXECUTOR_SERVICE = new ThreadPoolExecutor(5, 5, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(1024), new NamedThreadFactory("sentinel-kairos-metrics-task"));
 
     public final String SENTINEL_METADATA_SERVICE_NAME = "sentinel.metadata";
@@ -55,6 +59,7 @@ public class KairosHelper {
 
     public final String SENTINEL_PRIFIX = "sentinel.";
 
+    private final static int KAIROS_UPDATE_META_DRUTION = 1000 * 60;
     //kairosDB address
     public static final String KARIOSDB_ADDRESS = "sentinel.kairosdb.address";
 
@@ -229,9 +234,11 @@ public class KairosHelper {
             if (statusCode == 204) {
                 return true;
             } else {
+                logger.error("saveKairosMetadata with raw http client failed ! url is " + url);
                 throw new RuntimeException("saveKairosMetadata with raw http client failed ! url is " + url);
             }
         } catch (Exception e) {
+            logger.error("saveKairosMetadata  with raw http client failed ! url is " + url, e);
             throw new RuntimeException("saveKairosMetadata  with raw http client failed ! url is " + url, e);
         }
     }
@@ -245,10 +252,12 @@ public class KairosHelper {
                 String metadataJSON = EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8);
                 return metadataJSON;
             } else {
-                throw new RuntimeException("getKairosMetadata with raw http client failed ! url is " + url);
+                logger.error("getKairosMetadata with raw http client failed ! url is " + url);
+                return null;
             }
         } catch (Exception e) {
-            throw new RuntimeException("getKairosMetadata  with raw http client failed ! url is " + url, e);
+            logger.error("getKairosMetadata  with raw http client failed ! url is " + url, e);
+            return null;
         }
     }
 
@@ -257,26 +266,45 @@ public class KairosHelper {
         resourceDiscovery.addResource(metric.getApp(), metric.getResource());
 
         KAIROS_EXECUTOR_SERVICE.submit(() -> {
+            Long currentTime = System.currentTimeMillis();
             String appName = metric.getApp();
-            KairosApplicationEntity kairosApplication = new KairosApplicationEntity();
             AppInfo appInfo = machineDiscovery.getDetailApp(appName);
-            if (Objects.nonNull(appInfo)) {
-                kairosApplication.setMachines(appInfo.getMachines());
-            } else {
-                String kairosMetadata = getKairosMetadata(KAIROS_ADDRESS + METADATA_SERVICE_PATH + "app/" + metric.getApp());
-                kairosApplication = GSON.fromJson(kairosMetadata, KairosApplicationEntity.class);
-                kairosApplication.getMachines().stream().forEach(machineInfo -> {
+            if (Objects.nonNull(appInfo)) {//already load app from kairosDB
+                if ((currentTime - appInfo.getLastHeartbeat()) > KAIROS_UPDATE_META_DRUTION) {
+                    //get updated info from kairosDB
+                    KairosApplicationEntity application = new KairosApplicationEntity();
+                    application.setMachines(appInfo.getMachines());
+                    application.setLastHeartbeat(appInfo.getLastHeartbeat());
+                    application.setApp(appName);
+                    application.setResources(resourceDiscovery.getResources(metric.getApp()));
+                    String applicationJSON = GSON.toJson(application);
+                    saveKairosMetadata(KAIROS_ADDRESS + METADATA_SERVICE_PATH + "app/" + metric.getApp(), applicationJSON);
+                    appInfo.setLastHeartbeat(System.currentTimeMillis());
+                } else {
+                    //do nothing
+                }
+            } else {//not load app
+                KairosApplicationEntity application = getKairosApplication(metric.getApp());
+                application.getMachines().stream().forEach(machineInfo -> {
                     machineDiscovery.addMachine(machineInfo);
                 });
-                kairosApplication.getResources().stream().forEach(resource -> {
+                application.getResources().stream().forEach(resource -> {
                     resourceDiscovery.addResource(appName, resource);
                 });
+                appInfo = machineDiscovery.getDetailApp(appName);
+                //app  first set heartbeart time
+                appInfo.setLastHeartbeat(metric.getTimestamp().getTime());
             }
-            kairosApplication.setApp(appName);
-            kairosApplication.setResources(resourceDiscovery.getResources(metric.getApp()));
-
-            String applicationJSON = GSON.toJson(kairosApplication);
-            saveKairosMetadata(KAIROS_ADDRESS + METADATA_SERVICE_PATH + "app/" + metric.getApp(), applicationJSON);
         });
+    }
+
+    private KairosApplicationEntity getKairosApplication(String appName) {
+        String kairosMetadata = getKairosMetadata(KAIROS_ADDRESS + METADATA_SERVICE_PATH + "app/" + appName);
+        if (Objects.nonNull(kairosMetadata)) {
+            KairosApplicationEntity application = GSON.fromJson(kairosMetadata, KairosApplicationEntity.class);
+            return application;
+        } else {
+            return null;
+        }
     }
 }
