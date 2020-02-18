@@ -15,24 +15,32 @@
  */
 package com.alibaba.csp.sentinel.dashboard.controller;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-
-import javax.servlet.http.HttpServletRequest;
-
 import com.alibaba.csp.sentinel.dashboard.discovery.AppInfo;
 import com.alibaba.csp.sentinel.dashboard.discovery.AppManagement;
 import com.alibaba.csp.sentinel.dashboard.discovery.MachineInfo;
 import com.alibaba.csp.sentinel.dashboard.domain.Result;
 import com.alibaba.csp.sentinel.dashboard.domain.vo.MachineInfoVo;
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.PropertyNamingStrategy;
+import com.alibaba.fastjson.parser.ParserConfig;
+import com.alibaba.fastjson.serializer.SerializeConfig;
+import org.apache.http.HttpEntity;
+import org.apache.http.client.ResponseHandler;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.util.EntityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.bind.annotation.*;
+
+import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  * @author Carpenter Lee
@@ -66,7 +74,7 @@ public class AppController {
         Collections.sort(list, Comparator.comparing(MachineInfo::getApp).thenComparing(MachineInfo::getIp).thenComparingInt(MachineInfo::getPort));
         return Result.ofSuccess(MachineInfoVo.fromMachineInfoList(list));
     }
-    
+
     @RequestMapping(value = "/{app}/machine/remove.json")
     public Result<String> removeMachineById(
             @PathVariable("app") String app,
@@ -82,4 +90,47 @@ public class AppController {
             return Result.ofFail(1, "remove failed");
         }
     }
+
+    CloseableHttpClient httpClient = HttpClients.createDefault();
+    @Value("${sentinel.cmdb.address}")
+    private String cmdbAddress;
+
+    @RequestMapping(value = "/search.json")
+    public Result searchAppInfo(@RequestParam(value = "appId", required = false, defaultValue = "") String appId,
+                                    @RequestParam(name = "appName", required = false, defaultValue = "") String appName) {
+        String address = cmdbAddress + "?id=" + appId + "&name=" + appName;
+        HttpGet httpGet = new HttpGet(address);
+        ResponseHandler<String> responseHandler = response -> {
+            int status = response.getStatusLine().getStatusCode();
+            if (status == 200) {
+                HttpEntity entity = response.getEntity();
+                return entity != null ? EntityUtils.toString(entity) : null;
+            } else {
+               return null;
+            }
+        };
+        try {
+            String responseBody = httpClient.execute(httpGet, responseHandler);
+            if(Objects.isNull(responseBody)){
+                return Result.ofFail(1,"Can't get CMDB information ,please check CMDB");
+            }
+            JSONObject jsonObject = JSON.parseObject(responseBody);
+            JSONArray jsonArray = jsonObject.getJSONArray("results");
+            jsonArray.stream().forEach(element->{
+                JSONObject json = (JSONObject) element;
+                json.put("app",json.get("id").toString());
+                json.put("shown",true);
+                json.put("appType",0);
+                json.put("machines", ConcurrentHashMap.newKeySet());
+                json.put("lastHeartbeat",System.currentTimeMillis());
+
+                json.put("appId",json.get("id").toString());
+                json.put("appName",json.get("business").toString());
+            });
+            return Result.ofSuccess(jsonArray);
+        } catch (IOException e) {
+            return Result.ofFail(1,"Can't get CMDB information from remote host");
+        }
+    }
+
 }

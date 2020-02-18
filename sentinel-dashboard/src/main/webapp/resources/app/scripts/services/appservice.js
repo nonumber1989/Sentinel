@@ -9,4 +9,16 @@ app.service('AppService', ['$http', function ($http) {
       method: 'GET'
     });
   };
+  this.searchApps = function (appId,appName) {
+      var param = {
+        appId: appId,
+        appName: appName
+      };
+      return $http({
+        // url: 'app/mock_infos',
+        url: 'app/search.json',
+        params: param,
+        method: 'GET'
+      });
+    };
 }]);
