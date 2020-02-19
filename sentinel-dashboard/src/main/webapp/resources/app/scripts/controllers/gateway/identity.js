@@ -6,7 +6,8 @@ app.controller('GatewayIdentityCtl', ['$scope', '$stateParams', 'IdentityService
   function ($scope, $stateParams, IdentityService, ngDialog,
     GatewayFlowService, GatewayApiService, DegradeService, MachineService, $interval, $location, $timeout) {
 
-    $scope.app = $stateParams.app;
+    $scope.app = $scope.app = $stateParams.app;
+$scope.appName = $stateParams.appName;;
 
     $scope.currentPage = 1;
     $scope.pageSize = 16;

@@ -3,7 +3,8 @@ var app = angular.module('sentinelDashboardApp');
 app.controller('SentinelClusterAppServerListController', ['$scope', '$stateParams', 'ngDialog',
     'MachineService', 'ClusterStateService',
     function ($scope, $stateParams, ngDialog, MachineService, ClusterStateService) {
-        $scope.app = $stateParams.app;
+        $scope.app = $scope.app = $stateParams.app;
+$scope.appName = $stateParams.appName;;
         const UNSUPPORTED_CODE = 4041;
 
         const CLUSTER_MODE_CLIENT = 0;

@@ -3,7 +3,8 @@ var app = angular.module('sentinelDashboardApp');
 app.controller('DegradeCtl', ['$scope', '$stateParams', 'DegradeService', 'ngDialog', 'MachineService',
   function ($scope, $stateParams, DegradeService, ngDialog, MachineService) {
     //初始化
-    $scope.app = $stateParams.app;
+    $scope.app = $scope.app = $stateParams.app;
+$scope.appName = $stateParams.appName;;
     $scope.rulesPageConfig = {
       pageSize: 10,
       currentPageIndex: 1,

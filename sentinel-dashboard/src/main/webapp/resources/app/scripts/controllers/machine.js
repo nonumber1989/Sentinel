@@ -2,7 +2,8 @@ var app = angular.module('sentinelDashboardApp');
 
 app.controller('MachineCtl', ['$scope', '$stateParams', 'MachineService',
   function ($scope, $stateParams, MachineService) {
-    $scope.app = $stateParams.app;
+    $scope.app = $scope.app = $stateParams.app;
+$scope.appName = $stateParams.appName;;
     $scope.propertyName = '';
     $scope.reverse = false;
     $scope.currentPage = 1;

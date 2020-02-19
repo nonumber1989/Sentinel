@@ -4,7 +4,8 @@ app.controller('SystemCtl', ['$scope', '$stateParams', 'SystemService', 'ngDialo
   function ($scope, $stateParams, SystemService,
     ngDialog, MachineService) {
     //初始化
-    $scope.app = $stateParams.app;
+    $scope.app = $scope.app = $stateParams.app;
+$scope.appName = $stateParams.appName;;
     $scope.rulesPageConfig = {
       pageSize: 10,
       currentPageIndex: 1,

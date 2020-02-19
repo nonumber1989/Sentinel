@@ -20,7 +20,8 @@ app.controller('MetricCtl', ['$scope', '$stateParams', 'MetricService', '$interv
       $scope.endTimeFmt = formatDate(endTime);
     };
 
-    $scope.app = $stateParams.app;
+    $scope.app = $scope.app = $stateParams.app;
+$scope.appName = $stateParams.appName;;
     // 数据自动刷新频率
     var DATA_REFRESH_INTERVAL = 1000 * 10;
 

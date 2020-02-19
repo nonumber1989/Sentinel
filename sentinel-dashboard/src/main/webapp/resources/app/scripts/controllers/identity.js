@@ -6,7 +6,8 @@ app.controller('IdentityCtl', ['$scope', '$stateParams', 'IdentityService',
   function ($scope, $stateParams, IdentityService, ngDialog,
     FlowService, DegradeService, AuthorityRuleService, ParamFlowService, MachineService, $interval, $location, $timeout) {
 
-    $scope.app = $stateParams.app;
+    $scope.app = $scope.app = $stateParams.app;
+$scope.appName = $stateParams.appName;;
 
     $scope.currentPage = 1;
     $scope.pageSize = 16;

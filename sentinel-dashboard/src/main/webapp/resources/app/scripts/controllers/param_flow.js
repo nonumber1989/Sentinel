@@ -8,7 +8,8 @@ angular.module('sentinelDashboardApp').controller('ParamFlowController', ['$scop
   function ($scope, $stateParams, ParamFlowService, ngDialog,
     MachineService) {
     const UNSUPPORTED_CODE = 4041;
-    $scope.app = $stateParams.app;
+    $scope.app = $scope.app = $stateParams.app;
+$scope.appName = $stateParams.appName;;
     $scope.curExItem = {};
 
     $scope.paramItemClassTypeList = [

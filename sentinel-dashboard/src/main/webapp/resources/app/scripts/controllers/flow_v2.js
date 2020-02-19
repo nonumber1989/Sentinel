@@ -4,7 +4,8 @@ app.controller('FlowControllerV2', ['$scope', '$stateParams', 'FlowServiceV2', '
   'MachineService',
   function ($scope, $stateParams, FlowService, ngDialog,
     MachineService) {
-    $scope.app = $stateParams.app;
+    $scope.app = $scope.app = $stateParams.app;
+$scope.appName = $stateParams.appName;;
 
     $scope.rulesPageConfig = {
       pageSize: 10,

@@ -1,15 +1,15 @@
 angular.module('sentinelDashboardApp')
-  .directive('sidebar', ['$location', '$stateParams', 'AppService', function () {
+  .directive('sidebar', ['$location', '$stateParams', '$state','AppService', function () {
     return {
       templateUrl: 'app/scripts/directives/sidebar/sidebar.html',
       restrict: 'E',
       replace: true,
       scope: {
       },
-      controller: function ($scope, $stateParams, $location, AppService) {
-        $scope.app = $stateParams.app;
+      controller: function ($scope, $stateParams, $state, $location, AppService) {
+        $scope.app = $scope.app = $stateParams.app;
+$scope.appName = $stateParams.appName;;
         $scope.collapseVar = 0;
-        $scope.cmdbApps = [];
         // app
 //        AppService.getApps().success(
 //          function (data) {
@@ -48,7 +48,9 @@ angular.module('sentinelDashboardApp')
             if (item !== entry) {
               item.active = false;
             }
+             $state.go('dashboard.home', {"app":entry.appId,"appName":entry.appName});
           });
+
         };
 
         /**
@@ -95,9 +97,7 @@ angular.module('sentinelDashboardApp')
                 }
              }
            );
-
         };
-
 
       }
     };

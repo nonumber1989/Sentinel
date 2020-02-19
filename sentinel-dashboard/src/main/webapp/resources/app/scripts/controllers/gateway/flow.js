@@ -2,7 +2,8 @@ var app = angular.module('sentinelDashboardApp');
 
 app.controller('GatewayFlowCtl', ['$scope', '$stateParams', 'GatewayFlowService', 'GatewayApiService', 'ngDialog', 'MachineService',
   function ($scope, $stateParams, GatewayFlowService, GatewayApiService, ngDialog, MachineService) {
-    $scope.app = $stateParams.app;
+    $scope.app = $scope.app = $stateParams.app;
+$scope.appName = $stateParams.appName;;
 
     $scope.rulesPageConfig = {
       pageSize: 10,

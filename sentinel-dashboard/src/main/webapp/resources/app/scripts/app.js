@@ -93,8 +93,9 @@ angular
       })
 
       .state('dashboard.home', {
-        url: '/home',
+        url: '/home/:app?appName',
         templateUrl: 'app/views/dashboard/home.html',
+        controller: 'DashboardCtrl',
         resolve: {
           loadMyFiles: ['$ocLazyLoad', function ($ocLazyLoad) {
             return $ocLazyLoad.load({
@@ -109,7 +110,7 @@ angular
 
       .state('dashboard.flowV1', {
         templateUrl: 'app/views/flow_v1.html',
-        url: '/flow/:app',
+        url: '/flow/:app?appName',
         controller: 'FlowControllerV1',
         resolve: {
           loadMyFiles: ['$ocLazyLoad', function ($ocLazyLoad) {
@@ -125,7 +126,7 @@ angular
 
       .state('dashboard.flow', {
           templateUrl: 'app/views/flow_v2.html',
-          url: '/v2/flow/:app',
+          url: '/v2/flow/:app?appName',
           controller: 'FlowControllerV2',
           resolve: {
               loadMyFiles: ['$ocLazyLoad', function ($ocLazyLoad) {
@@ -141,7 +142,7 @@ angular
 
       .state('dashboard.paramFlow', {
         templateUrl: 'app/views/param_flow.html',
-        url: '/paramFlow/:app',
+        url: '/paramFlow/:app?appName',
         controller: 'ParamFlowController',
         resolve: {
           loadMyFiles: ['$ocLazyLoad', function ($ocLazyLoad) {
@@ -157,7 +158,7 @@ angular
 
       .state('dashboard.clusterAppAssignManage', {
           templateUrl: 'app/views/cluster_app_assign_manage.html',
-          url: '/cluster/assign_manage/:app',
+          url: '/cluster/assign_manage/:app?appName',
           controller: 'SentinelClusterAppAssignManageController',
           resolve: {
               loadMyFiles: ['$ocLazyLoad', function ($ocLazyLoad) {
@@ -173,7 +174,7 @@ angular
 
       .state('dashboard.clusterAppServerList', {
           templateUrl: 'app/views/cluster_app_server_list.html',
-          url: '/cluster/server/:app',
+          url: '/cluster/server/:app?appName',
           controller: 'SentinelClusterAppServerListController',
           resolve: {
               loadMyFiles: ['$ocLazyLoad', function ($ocLazyLoad) {
@@ -189,7 +190,7 @@ angular
 
       .state('dashboard.clusterAppClientList', {
           templateUrl: 'app/views/cluster_app_client_list.html',
-          url: '/cluster/client/:app',
+          url: '/cluster/client/:app?appName',
           controller: 'SentinelClusterAppTokenClientListController',
           resolve: {
               loadMyFiles: ['$ocLazyLoad', function ($ocLazyLoad) {
@@ -205,7 +206,7 @@ angular
 
       .state('dashboard.clusterSingle', {
           templateUrl: 'app/views/cluster_single_config.html',
-          url: '/cluster/single/:app',
+          url: '/cluster/single/:app?appName',
           controller: 'SentinelClusterSingleController',
           resolve: {
               loadMyFiles: ['$ocLazyLoad', function ($ocLazyLoad) {
@@ -221,7 +222,7 @@ angular
 
       .state('dashboard.authority', {
             templateUrl: 'app/views/authority.html',
-            url: '/authority/:app',
+            url: '/authority/:app?appName',
             controller: 'AuthorityRuleController',
             resolve: {
                 loadMyFiles: ['$ocLazyLoad', function ($ocLazyLoad) {
@@ -237,7 +238,7 @@ angular
 
       .state('dashboard.degrade', {
         templateUrl: 'app/views/degrade.html',
-        url: '/degrade/:app',
+        url: '/degrade/:app?appName',
         controller: 'DegradeCtl',
         resolve: {
           loadMyFiles: ['$ocLazyLoad', function ($ocLazyLoad) {
@@ -253,7 +254,7 @@ angular
 
       .state('dashboard.system', {
         templateUrl: 'app/views/system.html',
-        url: '/system/:app',
+        url: '/system/:app?appName',
         controller: 'SystemCtl',
         resolve: {
           loadMyFiles: ['$ocLazyLoad', function ($ocLazyLoad) {
@@ -269,7 +270,7 @@ angular
 
       .state('dashboard.machine', {
         templateUrl: 'app/views/machine.html',
-        url: '/app/:app',
+        url: '/app/:app?appName',
         controller: 'MachineCtl',
         resolve: {
           loadMyFiles: ['$ocLazyLoad', function ($ocLazyLoad) {
@@ -285,7 +286,7 @@ angular
 
       .state('dashboard.identity', {
         templateUrl: 'app/views/identity.html',
-        url: '/identity/:app',
+        url: '/identity/:app?appName',
         controller: 'IdentityCtl',
         resolve: {
           loadMyFiles: ['$ocLazyLoad', function ($ocLazyLoad) {
@@ -301,7 +302,7 @@ angular
 
       .state('dashboard.gatewayIdentity', {
         templateUrl: 'app/views/gateway/identity.html',
-        url: '/gateway/identity/:app',
+        url: '/gateway/identity/:app?appName',
         controller: 'GatewayIdentityCtl',
         resolve: {
           loadMyFiles: ['$ocLazyLoad', function ($ocLazyLoad) {
@@ -317,7 +318,7 @@ angular
 
       .state('dashboard.metric', {
         templateUrl: 'app/views/metric.html',
-        url: '/metric/:app',
+        url: '/metric/:app?appName',
         controller: 'MetricCtl',
         resolve: {
           loadMyFiles: ['$ocLazyLoad', function ($ocLazyLoad) {
@@ -333,7 +334,7 @@ angular
 
       .state('dashboard.gatewayApi', {
         templateUrl: 'app/views/gateway/api.html',
-        url: '/gateway/api/:app',
+        url: '/gateway/api/:app?appName',
         controller: 'GatewayApiCtl',
         resolve: {
           loadMyFiles: ['$ocLazyLoad', function ($ocLazyLoad) {
@@ -349,7 +350,7 @@ angular
 
       .state('dashboard.gatewayFlow', {
           templateUrl: 'app/views/gateway/flow.html',
-          url: '/gateway/flow/:app',
+          url: '/gateway/flow/:app?appId',
           controller: 'GatewayFlowCtl',
           resolve: {
               loadMyFiles: ['$ocLazyLoad', function ($ocLazyLoad) {

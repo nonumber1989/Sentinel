@@ -5,7 +5,8 @@ angular.module('sentinelDashboardApp').controller('AuthorityRuleController', ['$
     'MachineService',
     function ($scope, $stateParams, AuthorityRuleService, ngDialog,
               MachineService) {
-        $scope.app = $stateParams.app;
+        $scope.app = $scope.app = $stateParams.app;
+$scope.appName = $stateParams.appName;;
 
         $scope.rulesPageConfig = {
             pageSize: 10,
